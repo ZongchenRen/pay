@@ -2,9 +2,11 @@ package cn.gogosoft.pay.service.impl;
 
 import java.math.BigDecimal;
 
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.google.gson.Gson;
 import com.lly835.bestpay.enums.BestPayPlatformEnum;
 import com.lly835.bestpay.enums.BestPayTypeEnum;
 import com.lly835.bestpay.enums.OrderStatusEnum;
@@ -26,11 +28,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class PayServiceImpl implements IPayService {
+	private final static String QUEUE_PAY_NOTIFY = "payNotify";
+
 	@Autowired
 	private BestPayService bestPayService;
 
 	@Autowired
 	private PayInfoMapper payInfoMapper;
+
+	@Autowired
+	private AmqpTemplate amqpTemplate;
 
 	/**
 	 * 创建/发起支付
@@ -92,7 +99,7 @@ public class PayServiceImpl implements IPayService {
 		}
 
 		// TODO pay发送MQ消息，mall接收MQ消息
-
+		amqpTemplate.convertAndSend(QUEUE_PAY_NOTIFY, new Gson().toJson(payInfo));
 		if (response.getPayPlatformEnum() == BestPayPlatformEnum.WX) {
 			// 4.告诉微信不要再通知
 			return "<xml>\n" + "  <return_code><![CDATA[SUCCESS]]></return_code>\n"
